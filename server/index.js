@@ -137,7 +137,7 @@ async function fetchAthlete(accessToken) {
   return res.json();
 }
 
-// Production (e.g. Render): SameSite=None and Secure=true required for cross-site cookies (local frontend → Render backend).
+// Production (e.g. Render): SameSite=None and Secure=true required for cross-site cookies (Vercel frontend → Render backend). Do not set domain.
 function sessionCookieOptions() {
   return {
     httpOnly: true,
@@ -145,6 +145,7 @@ function sessionCookieOptions() {
     sameSite: isProd ? 'none' : 'lax',
     maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
     path: '/',
+    // domain: not set — let browser use API host only
   };
 }
 
@@ -201,6 +202,18 @@ app.get('/api/debug/auth-status', async (req, res) => {
     requestOrigin: req.get('origin') || null,
     host: req.get('host') || null,
     'x-forwarded-proto': req.get('x-forwarded-proto') || null,
+  });
+});
+
+// GET /api/debug/cookie-echo — DEBUG only: raw Cookie header presence/length and parsed cookie keys (no values)
+app.get('/api/debug/cookie-echo', (req, res) => {
+  if (!DEBUG) return res.status(404).json({ error: 'Not found' });
+  const raw = req.get('cookie') || '';
+  const parsedCookiesKeys = [...Object.keys(req.cookies || {}), ...Object.keys(req.signedCookies || {})];
+  res.json({
+    rawCookieHeaderPresent: raw.length > 0,
+    cookieHeaderLength: raw.length,
+    parsedCookiesKeys,
   });
 });
 
@@ -497,11 +510,12 @@ app.get('/auth/strava/callback', async (req, res) => {
         data: { accessToken, refreshToken, expiresAt },
       });
       const cookieOpts = { ...sessionCookieOptions(), signed: true };
+      res.setHeader('X-Set-Cookie-Attempt', 'session');
       res.cookie('tr_session', existingStrava.userId, cookieOpts);
       const redirectTo = `${FRONTEND_URL}/app`;
       if (DEBUG) {
         console.log('[auth] callback athleteId=%s existingAccount=true setting tr_session=yes setting tr_strava_pending=no redirectTo=%s', athleteId, redirectTo);
-        console.log('[session] set-cookie secure=%s sameSite=%s path=/', cookieOpts.secure, cookieOpts.sameSite);
+        console.log('[session] set-cookie secure=%s sameSite=%s path=/ httpOnly=true', cookieOpts.secure, cookieOpts.sameSite);
       }
       return res.redirect(302, redirectTo);
     }
@@ -519,12 +533,21 @@ app.get('/auth/strava/callback', async (req, res) => {
       maxAge: 10 * 60 * 1000,
       path: '/',
       signed: true,
+      // domain: not set — let browser use API host only
     };
+    res.setHeader('X-Set-Cookie-Attempt', 'pending');
     res.cookie('tr_strava_pending', pending, pendingCookieOpts);
     const redirectToOnboarding = `${FRONTEND_URL}/onboarding`;
     if (DEBUG) {
       console.log('[auth] callback athleteId=%s existingAccount=false setting tr_session=no setting tr_strava_pending=yes redirectTo=%s', athleteId, redirectToOnboarding);
-      console.log('[session] set-cookie tr_strava_pending secure=%s sameSite=%s path=/', pendingCookieOpts.secure, pendingCookieOpts.sameSite);
+      console.log('[session] set-cookie tr_strava_pending secure=%s sameSite=%s path=/ httpOnly=true', pendingCookieOpts.secure, pendingCookieOpts.sameSite);
+    }
+    const useHandoffPage = process.env.USE_COOKIE_HANDOFF_PAGE === '1' || process.env.USE_COOKIE_HANDOFF_PAGE === 'true';
+    if (useHandoffPage) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      return res.status(200).send(
+        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Setting cookie…</title></head><body><p>Setting cookie…</p><script>window.location.replace(${JSON.stringify(redirectToOnboarding)});</script></body></html>`
+      );
     }
     return res.redirect(302, redirectToOnboarding);
   } catch (e) {

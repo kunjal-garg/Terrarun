@@ -173,6 +173,9 @@ export default function TerraRun() {
 
   const fetchMe = useCallback(async () => {
     try {
+      if (typeof import.meta !== 'undefined' && import.meta.env?.DEV) {
+        console.log('[TerraRun] /api/me fetch credentials: include');
+      }
       const res = await fetch(`${API_BASE}/api/me`, { credentials: 'include' });
       if (!res.ok) {
         setMe(null);

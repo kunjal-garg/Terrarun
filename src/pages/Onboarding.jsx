@@ -32,8 +32,7 @@ export default function Onboarding() {
       const opts = { credentials: 'include' };
       try {
         if (IS_DEV) {
-          console.log('[Onboarding] GET', apiMeUrl);
-          console.log('[Onboarding] GET', apiPendingUrl);
+          console.log('[Onboarding] GET', apiMeUrl, 'GET', apiPendingUrl, 'credentials:', opts.credentials);
         }
         const [meRes, pendingRes] = await Promise.all([
           fetch(apiMeUrl, opts),
