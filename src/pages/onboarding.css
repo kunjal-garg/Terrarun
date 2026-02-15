@@ -1,0 +1,159 @@
+/* TerraRun onboarding – dark, neon accent */
+.onboarding-root {
+  --neon: #00ff88;
+  --neon-dim: rgba(0, 255, 136, 0.5);
+  --bg: #0a0a12;
+  --card: rgba(18, 18, 28, 0.95);
+  --text: #e8e8ee;
+  --text-muted: rgba(232, 232, 238, 0.6);
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+.onboarding-card {
+  width: 100%;
+  max-width: 400px;
+  padding: 2.5rem;
+  background: var(--card);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 20px;
+  box-shadow: 0 0 40px rgba(0, 255, 136, 0.08);
+}
+
+.onboarding-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0 0 0.25rem;
+}
+.onboarding-sub {
+  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-label {
+  display: block;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 0.5rem;
+}
+.onboarding-input {
+  width: 100%;
+  padding: 0.9rem 1rem;
+  font-size: 1rem;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.06);
+  border: 2px solid rgba(0, 255, 136, 0.2);
+  border-radius: 10px;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.onboarding-input::placeholder {
+  color: var(--text-muted);
+}
+.onboarding-input:hover {
+  border-color: rgba(0, 255, 136, 0.35);
+}
+.onboarding-input:focus {
+  outline: none;
+  border-color: var(--neon);
+  box-shadow: 0 0 0 3px var(--neon-dim);
+}
+.onboarding-input.invalid {
+  border-color: rgba(255, 80, 80, 0.5);
+}
+.onboarding-helper {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+.onboarding-error-inline {
+  font-size: 0.85rem;
+  color: #ff6666;
+  margin-top: 0.35rem;
+}
+
+.onboarding-submit {
+  width: 100%;
+  padding: 1rem 1.5rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0a0a12;
+  background: linear-gradient(135deg, var(--neon) 0%, #00d4aa 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 24px var(--neon-dim);
+}
+.onboarding-submit:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 32px var(--neon-dim);
+}
+.onboarding-submit:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 3px;
+}
+.onboarding-submit:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.onboarding-skip {
+  display: block;
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.onboarding-skip:hover {
+  color: var(--neon);
+}
+.onboarding-skip:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 2px;
+}
+
+.onboarding-banner {
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+.onboarding-banner.error {
+  background: rgba(255, 80, 80, 0.12);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  color: #ff6666;
+}
+
+.onboarding-back {
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--neon);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.onboarding-back:hover {
+  color: #00d4aa;
+}
+.onboarding-back:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 2px;
+}

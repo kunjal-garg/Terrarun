@@ -1,0 +1,51 @@
+# Dependencies
+node_modules/
+
+# Build / output
+dist/
+build/
+*.local
+
+# Environment and secrets (keep .env.example)
+.env
+.env.local
+.env.*.local
+server/.env
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs and debug
+*.log
+npm-debug.log*
+logs/
+
+# Docker (optional: uncomment if you don't commit compose)
+# docker-compose.override.yml
+
+# Cursor (rules stay local)
+.cursor/
+
+# Agent-generated / handoff docs (do not commit; future-proof patterns)
+docs/AGENT_*.md
+docs/*AUDIT*.md
+docs/*HANDOFF*.md
+
+# Other generated / setup docs (do not commit)
+docs/BACKEND_PERSISTENCE.md
+docs/MAP_AND_STRAVA.md
+docs/STRAVA_OAUTH_SETUP.md
+docker/TROUBLESHOOTING.md
+docker/README.md
+src/assets/README.md
+
+# Prisma
+server/node_modules/

@@ -1,0 +1,50 @@
+services:
+  # PostgreSQL for persistence (Prisma)
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: terrarun
+    volumes:
+      - terrarun_pgdata:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 5
+
+  # Frontend: Vite app built and served at http://localhost:4173
+  # Frontend uses same host as page for API (getApiBase in src/utils/api.js) so 127.0.0.1:4173 → 127.0.0.1:8787
+  terrarun:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    ports:
+      - "4173:4173"
+    environment:
+      - NODE_ENV=production
+
+  # API server: PostgreSQL + Prisma, Strava OAuth, sessions at http://localhost:8787
+  api:
+    build:
+      context: server
+      dockerfile: Dockerfile
+    ports:
+      - "8787:8787"
+    env_file:
+      - server/.env
+    environment:
+      - PORT=8787
+      - FRONTEND_URL=http://localhost:4173
+      - STRAVA_REDIRECT_URI=http://localhost:8787/auth/strava/callback
+      - DATABASE_URL=postgresql://postgres:postgres@postgres:5432/terrarun?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    command: sh -c "npx prisma migrate deploy && node index.js"
+
+volumes:
+  terrarun_pgdata:

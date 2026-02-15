@@ -1,0 +1,165 @@
+// TerraRun – PostgreSQL + Prisma
+// Run: npx prisma generate && npx prisma migrate dev
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid()) @db.Uuid
+  nickname  String   @unique
+  createdAt DateTime @default(now())
+
+  stravaAccount   StravaAccount?
+  activities      Activity[]
+  sentRequests    FriendRequest[]     @relation("FromUser")
+  receivedRequests FriendRequest[]    @relation("ToUser")
+  friendships     Friendship[]       @relation("UserFriendships")
+  friendOf        Friendship[]       @relation("FriendOf")
+  notifications   Notification[]
+  ownedCells      TerritoryCell[]
+  claimsMade      TerritoryClaim[]   @relation("Claimer")
+  claimsLost      TerritoryClaim[]  @relation("PreviousOwner")
+  badges          UserBadge[]
+
+  @@map("users")
+}
+
+model StravaAccount {
+  id              String    @id @default(uuid()) @db.Uuid
+  userId          String    @unique @db.Uuid
+  athleteId       String    @unique
+  accessToken     String
+  refreshToken    String
+  expiresAt       Int       // Unix seconds
+  lastSyncAt      Int?      // Unix seconds, nullable (incremental fetch cursor)
+  lastAutoSyncAt  DateTime? // Throttle: do not auto-sync if within AUTO_SYNC_MINUTES
+  createdAt       DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("strava_accounts")
+}
+
+model Activity {
+  id                   String   @id @default(uuid()) @db.Uuid
+  userId               String   @db.Uuid
+  stravaActivityId     String   @unique
+  name                 String
+  type                 String
+  startDate            DateTime
+  distance             Float?   // meters
+  movingTime           Int?     // seconds
+  summaryPolyline      String?  @db.Text
+  routeGeojson         Json?    // GeoJSON LineString or null
+  loopPolygonGeojson   Json?    @map("loop_polygon_geojson") // GeoJSON Polygon when route is a closed loop (territory)
+  loopMinLng           Float?   @map("loop_min_lng") // bbox for loop (spatial query)
+  loopMinLat           Float?   @map("loop_min_lat")
+  loopMaxLng           Float?   @map("loop_max_lng")
+  loopMaxLat           Float?   @map("loop_max_lat")
+  createdAt            DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  territoryClaims TerritoryClaim[]
+
+  @@map("activities")
+}
+
+model FriendRequest {
+  id          String   @id @default(uuid()) @db.Uuid
+  fromUserId  String   @db.Uuid
+  toUserId    String   @db.Uuid
+  status      String   // PENDING, ACCEPTED, REJECTED
+  createdAt   DateTime @default(now())
+  respondedAt DateTime?
+
+  fromUser User @relation("FromUser", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("ToUser", fields: [toUserId], references: [id], onDelete: Cascade)
+
+  @@unique([fromUserId, toUserId])
+  @@map("friend_requests")
+}
+
+model Friendship {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  friendId  String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  user   User @relation("UserFriendships", fields: [userId], references: [id], onDelete: Cascade)
+  friend User @relation("FriendOf", fields: [friendId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, friendId])
+  @@map("friendships")
+}
+
+model Notification {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  type      String
+  title     String
+  body      String
+  meta      Json?
+  readAt    DateTime?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model TerritoryCell {
+  cellId          String   @id // format "${cellX}:${cellY}"
+  cellX           Int
+  cellY           Int
+  ownerUserId     String   @db.Uuid
+  lockedUntil     DateTime
+  lastClaimedAt   DateTime
+  lastActivityId  String?  @db.Uuid
+
+  owner User @relation(fields: [ownerUserId], references: [id], onDelete: Cascade)
+
+  @@index([cellX, cellY])
+  @@map("territory_cells")
+}
+
+model TerritoryClaim {
+  id                  String   @id @default(uuid()) @db.Uuid
+  cellId              String
+  cellX               Int
+  cellY               Int
+  claimerUserId       String   @db.Uuid
+  previousOwnerUserId String?  @db.Uuid
+  activityId          String   @db.Uuid
+  reason              String   // LOOP_CAPTURE, LOOP_DEFEND_REFRESH
+  claimedAt           DateTime @default(now())
+
+  claimer       User     @relation("Claimer", fields: [claimerUserId], references: [id], onDelete: Cascade)
+  previousOwner User?    @relation("PreviousOwner", fields: [previousOwnerUserId], references: [id], onDelete: SetNull)
+  activity      Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@index([cellId])
+  @@index([claimedAt])
+  @@map("territory_claims")
+}
+
+model UserBadge {
+  id         String    @id @default(uuid()) @db.Uuid
+  userId     String    @db.Uuid
+  badgeKey   String
+  tier       Int?      // null for non-tiered; 1..n for tiered
+  unlockedAt DateTime @default(now())
+  isSecret   Boolean   @default(false)
+  meta       Json?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeKey, tier])
+  @@index([userId])
+  @@map("user_badges")
+}

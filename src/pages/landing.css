@@ -1,0 +1,275 @@
+/* TerraRun landing – left: watermark; right: hero text + login box (contained) */
+.landing-root {
+  --neon: #00ff88;
+  --neon-dim: rgba(0, 255, 136, 0.6);
+  --cyan: #00d4aa;
+  --cyan-dim: rgba(0, 212, 170, 0.5);
+  --bg: #0a0a12;
+  --card: rgba(18, 18, 28, 0.97);
+  --text: #e8e8ee;
+  --text-muted: rgba(232, 232, 238, 0.65);
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  overflow-x: hidden;
+}
+
+.landing-split {
+  display: flex;
+  min-height: 100vh;
+  align-items: stretch;
+}
+@media (max-width: 768px) {
+  .landing-split {
+    flex-direction: column;
+    padding: 1.5rem 1rem 2rem;
+    gap: 0;
+  }
+}
+@media (min-width: 769px) {
+  .landing-split {
+    flex-direction: row;
+  }
+}
+
+/* Left column: watermark only */
+.landing-left-col {
+  flex: 0 0 50%;
+  position: relative;
+  min-height: 30vh;
+  padding: 2rem;
+}
+@media (min-width: 769px) {
+  .landing-left-col {
+    min-height: 100vh;
+    padding: 3rem;
+  }
+}
+
+.landing-hero-watermark {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Background logo: same size, real colors (no blur, moderate opacity so it stays background) */
+.landing-watermark-img {
+  width: min(95%, 620px);
+  height: auto;
+  max-height: min(65vh, 430px);
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.55;
+}
+.landing-watermark-text {
+  font-size: min(22vw, 11.5rem);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  color: var(--neon);
+  opacity: 0.14;
+  white-space: nowrap;
+}
+
+/* Right column: hero text + login box grouped, contained */
+.landing-right-col {
+  flex: 0 0 50%;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 2rem;
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .landing-right-col {
+    flex: none;
+    width: 100%;
+    justify-content: center;
+    padding: 1.5rem 1rem 2rem;
+    min-height: 0;
+  }
+}
+@media (min-width: 769px) {
+  .landing-right-col {
+    border-left: 1px solid rgba(0, 255, 136, 0.08);
+    padding: 2rem 3rem 2rem 2.5rem;
+  }
+}
+
+.landing-right-inner {
+  width: 100%;
+  max-width: 448px;
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .landing-right-inner {
+    max-width: 100%;
+  }
+}
+
+/* Hero text: left-aligned with card, above box (contrast preserved over watermark) */
+.landing-brand {
+  font-size: clamp(2.25rem, 5vw, 3.25rem);
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--text);
+  margin: 0 0 0.25em;
+  text-shadow: 0 0 40px rgba(0, 255, 136, 0.12), 0 1px 2px rgba(0, 0, 0, 0.4);
+  text-align: left;
+}
+.landing-tagline {
+  font-size: clamp(1rem, 1.8vw, 1.2rem);
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0.02em;
+  margin: 0 0 1.75rem;
+  text-align: left;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Login/CTA box: same left edge as hero text, no overflow */
+.landing-card {
+  width: 100%;
+  max-width: 448px;
+  padding: 1.75rem 1.5rem;
+  background: var(--card);
+  border: 1px solid rgba(0, 255, 136, 0.12);
+  border-radius: 16px;
+  box-shadow: 0 0 48px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.02);
+  box-sizing: border-box;
+}
+@media (max-width: 768px) {
+  .landing-card {
+    padding: 1.5rem 1.25rem;
+    max-width: 100%;
+  }
+}
+
+/* CTA with Strava icon */
+.landing-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 1rem 1.25rem;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0a0a12;
+  background: linear-gradient(135deg, var(--neon) 0%, var(--cyan) 100%);
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  box-shadow: 0 0 24px var(--neon-dim);
+  box-sizing: border-box;
+}
+.landing-cta .landing-cta-icon {
+  flex-shrink: 0;
+  color: #0a0a12;
+}
+.landing-cta:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 0 32px var(--neon-dim), 0 4px 20px rgba(0, 255, 136, 0.25);
+}
+.landing-cta:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 3px;
+}
+.landing-cta:disabled {
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.landing-dev-switch {
+  margin: 0.75rem 0 0;
+  font-size: 0.8rem;
+}
+.landing-dev-switch-link {
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+.landing-dev-switch-link:hover {
+  color: var(--neon-dim);
+}
+.landing-privacy {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin: 1rem 0 0;
+  opacity: 0.9;
+}
+
+.landing-banner {
+  padding: 0.9rem 1rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+  font-size: 0.95rem;
+}
+.landing-banner.success {
+  background: rgba(0, 255, 136, 0.12);
+  border: 1px solid rgba(0, 255, 136, 0.3);
+  color: var(--neon);
+}
+.landing-banner.error {
+  background: rgba(255, 80, 80, 0.12);
+  border: 1px solid rgba(255, 80, 80, 0.3);
+  color: #ff6666;
+}
+
+.landing-continue {
+  margin-top: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.85rem 1.25rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--neon);
+  background: transparent;
+  border: 2px solid var(--neon-dim);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s;
+}
+.landing-continue:hover {
+  background: rgba(0, 255, 136, 0.1);
+  box-shadow: 0 0 20px var(--neon-dim);
+}
+.landing-continue:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 2px;
+}
+
+.landing-what-toggle {
+  display: block;
+  margin-top: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--cyan);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
+}
+.landing-what-toggle:hover {
+  color: var(--neon);
+}
+.landing-what-toggle:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+.landing-what-text {
+  margin-top: 0.75rem;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  border-left: 3px solid var(--cyan-dim);
+}
