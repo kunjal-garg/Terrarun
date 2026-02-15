@@ -157,3 +157,32 @@
   outline: 2px solid var(--neon);
   outline-offset: 2px;
 }
+
+/* Diagnostics (guard view) – small monospace for API report */
+.onboarding-diagnostics {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-family: ui-monospace, monospace;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+.onboarding-diagnostics strong {
+  color: var(--text);
+}
+.onboarding-diagnostics .line {
+  margin-bottom: 0.35rem;
+}
+.onboarding-cookie-hint {
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(255, 200, 80, 0.08);
+  border: 1px solid rgba(255, 200, 80, 0.25);
+  border-radius: 8px;
+  font-size: 0.85rem;
+  color: rgba(232, 232, 238, 0.9);
+}

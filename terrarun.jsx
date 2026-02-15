@@ -261,7 +261,8 @@ export default function TerraRun() {
         }
       })
       .catch((e) => {
-        setAutoSyncError(e?.message || 'Network error');
+        const msg = e?.message || 'Network error';
+        setAutoSyncError(msg === 'Failed to fetch' ? 'Network error. Check that the API is reachable and CORS is configured for this origin.' : msg);
       });
   }, [me?.stravaLinked, fetchRunModeStats]);
 
