@@ -22,9 +22,10 @@ export default function StravaPanel({
   apiBase,
 }) {
   const [loading, setLoading] = useState(false);
-  const [resyncLoading, setResyncLoading] = useState(false);
+  const [reconcileLoading, setReconcileLoading] = useState(false);
   const [error, setError] = useState(null);
   const [stravaMessage, setStravaMessage] = useState(null);
+  const [reconcileMessage, setReconcileMessage] = useState(null);
   const base = normalizeApiBase(apiBase ?? getApiBase());
 
   useEffect(() => {
@@ -70,10 +71,11 @@ export default function StravaPanel({
     }
   };
 
-  const handleResync = async () => {
-    const url = `${base}/api/strava/resync`;
-    setResyncLoading(true);
+  const handleImportRecent = async () => {
+    const url = `${base}/api/strava/reconcile?days=90`;
+    setReconcileLoading(true);
     setError(null);
+    setReconcileMessage(null);
     try {
       const res = await fetch(url, {
         method: 'POST',
@@ -84,20 +86,28 @@ export default function StravaPanel({
       if (!res.ok) {
         const serverMsg = data.message || data.error || data.detail || res.statusText;
         if (typeof console !== 'undefined' && console.warn) {
-          console.warn('[StravaPanel] Resync failed', { url, status: res.status, body: data });
+          console.warn('[StravaPanel] Reconcile failed', { url, status: res.status, body: data });
         }
         setError(serverMsg);
         return;
       }
       if (typeof onSync === 'function') onSync(data);
       if (typeof onResyncComplete === 'function') onResyncComplete();
+      const u = data.upsertedCount ?? 0;
+      const r = data.updatedPolylinesCount ?? 0;
+      if (u > 0 || r > 0) {
+        const parts = [];
+        if (u > 0) parts.push(`Imported ${u} activities`);
+        if (r > 0) parts.push(`updated ${r} routes`);
+        setReconcileMessage(parts.join(', '));
+      }
     } catch (e) {
       if (typeof console !== 'undefined' && console.warn) {
-        console.warn('[StravaPanel] Resync fetch error', { url, error: e?.message });
+        console.warn('[StravaPanel] Reconcile fetch error', { url, error: e?.message });
       }
-      setError(formatFetchError(e, url, 'Failed to resync'));
+      setError(formatFetchError(e, url, 'Failed to import recent activities'));
     } finally {
-      setResyncLoading(false);
+      setReconcileLoading(false);
     }
   };
 
@@ -139,23 +149,34 @@ export default function StravaPanel({
         >
           {loading ? 'Syncing…' : 'Load my Strava activities'}
         </button>
-        {(typeof import.meta !== 'undefined' && (import.meta.env?.VITE_APP_DEBUG === 'true' || import.meta.env?.DEV)) && (
-          <button
-            type="button"
-            onClick={handleResync}
-            className="btn btn-secondary"
-            style={{
-              width: '100%',
-              background: 'rgba(0,0,0,0.45)',
-              border: '1px solid rgba(0,255,136,0.4)',
-              color: 'rgba(255,255,255,0.9)',
-            }}
-            disabled={resyncLoading}
-          >
-            {resyncLoading ? 'Resyncing…' : 'Resync from Strava (recompute territory)'}
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={handleImportRecent}
+          className="btn btn-secondary"
+          style={{
+            width: '100%',
+            background: 'rgba(0,0,0,0.45)',
+            border: '1px solid rgba(0,255,136,0.4)',
+            color: 'rgba(255,255,255,0.9)',
+          }}
+          disabled={reconcileLoading}
+        >
+          {reconcileLoading ? 'Importing…' : 'Import recent (90 days)'}
+        </button>
       </div>
+
+      {reconcileMessage && (
+        <div style={{
+          marginTop: '10px',
+          padding: '8px 10px',
+          borderRadius: '8px',
+          background: 'rgba(0, 255, 136, 0.12)',
+          color: '#00ff88',
+          fontSize: '13px',
+        }}>
+          {reconcileMessage}
+        </div>
+      )}
 
       {error && (
         <div style={{

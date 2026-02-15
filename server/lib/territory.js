@@ -1,7 +1,7 @@
 /**
  * Territory Engine: Loop-only capture (Paper.io style), 50m grid, Web Mercator.
  * Territory is claimed ONLY when an activity forms a closed loop (first–last point ≤ LOOP_CLOSE_METERS).
- * Used by POST /api/strava/sync, POST /api/strava/resync, and GET /api/territory.
+ * Used by POST /api/strava/sync, POST /api/strava/resync, POST /api/strava/reconcile, and GET /api/territory.
  */
 
 const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';

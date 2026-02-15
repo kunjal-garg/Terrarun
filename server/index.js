@@ -890,6 +890,149 @@ app.post('/api/strava/resync', requireUser, async (req, res) => {
   }
 });
 
+// POST /api/strava/reconcile?days=90 — fetch last N days from Strava, upsert missing activities, fill polylines, apply territory for new/updated loops only. Does not change lastSyncAt.
+app.post('/api/strava/reconcile', requireUser, async (req, res) => {
+  const user = req.user;
+  const strava = user.stravaAccount;
+  if (!strava) {
+    return res.status(400).json({
+      error: 'Not linked',
+      message: 'Connect Strava first via the landing page.',
+    });
+  }
+
+  const days = Math.min(365, Math.max(1, parseInt(req.query.days, 10) || 90));
+  const now = Math.floor(Date.now() / 1000);
+  const cutoff = now - days * 24 * 3600;
+  const cutoffDate = new Date(cutoff * 1000);
+
+  try {
+    ensureStravaConfig();
+    let { accessToken, refreshToken, expiresAt } = strava;
+    if (now >= expiresAt) {
+      const refreshed = await refreshAccessToken(refreshToken);
+      accessToken = refreshed.access_token;
+      refreshToken = refreshed.refresh_token ?? refreshToken;
+      expiresAt = refreshed.expires_at ?? 0;
+      await prisma.stravaAccount.update({
+        where: { id: strava.id },
+        data: { accessToken, refreshToken, expiresAt },
+      });
+    }
+
+    // Paginate: fetch all activities since cutoff
+    const all = [];
+    let page = 1;
+    const perPage = 200;
+    while (true) {
+      const apiRes = await fetch(
+        `https://www.strava.com/api/v3/athlete/activities?after=${cutoff}&per_page=${perPage}&page=${page}`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      if (!apiRes.ok) {
+        const text = await apiRes.text();
+        return res.status(apiRes.status).json({ error: 'Strava API error', detail: text });
+      }
+      const list = await apiRes.json();
+      if (list.length === 0) break;
+      all.push(...list);
+      if (list.length < perPage) break;
+      page++;
+      if (DEBUG) console.log('[reconcile] fetched page', page - 1, 'size', list.length);
+    }
+
+    const fetchedCount = all.length;
+    if (DEBUG) console.log('[reconcile] cutoff=%s fetchedCount=%d', cutoffDate.toISOString(), fetchedCount);
+
+    let upsertedCount = 0;
+    let updatedPolylinesCount = 0;
+    let territoryAppliedCount = 0;
+    let skippedExisting = 0;
+
+    for (const act of all) {
+      const stravaId = String(act.id);
+      const existing = await prisma.activity.findUnique({
+        where: { stravaActivityId: stravaId },
+      });
+      const startDate = act.start_date ? new Date(act.start_date) : new Date();
+      let summaryPolyline = act.map?.summary_polyline ?? null;
+      let fetchedDetailForPolyline = false;
+      if (!summaryPolyline) {
+        try {
+          const detailRes = await fetch(
+            `https://www.strava.com/api/v3/activities/${act.id}`,
+            { headers: { Authorization: `Bearer ${accessToken}` } }
+          );
+          if (detailRes.ok) {
+            const detail = await detailRes.json();
+            summaryPolyline = detail.map?.summary_polyline ?? null;
+            fetchedDetailForPolyline = !!summaryPolyline;
+          }
+        } catch (_) {}
+      }
+      if (fetchedDetailForPolyline) updatedPolylinesCount++;
+
+      const hadNoPolyline = existing && !existing.summaryPolyline;
+      const nowHasPolyline = summaryPolyline != null && summaryPolyline !== '';
+      const needToApplyTerritory = nowHasPolyline && (!existing || hadNoPolyline);
+
+      const createData = {
+        userId: user.id,
+        stravaActivityId: stravaId,
+        name: act.name ?? 'Unnamed',
+        type: act.type ?? 'Unknown',
+        startDate,
+        distance: act.distance ?? null,
+        movingTime: act.moving_time ?? null,
+        summaryPolyline: summaryPolyline || null,
+      };
+      const updateData = {
+        name: act.name ?? 'Unnamed',
+        type: act.type ?? 'Unknown',
+        startDate,
+        distance: act.distance ?? null,
+        movingTime: act.moving_time ?? null,
+        ...(nowHasPolyline && { summaryPolyline }),
+      };
+
+      const activity = await prisma.activity.upsert({
+        where: { stravaActivityId: stravaId },
+        create: createData,
+        update: updateData,
+      });
+      const wasCreated = !existing;
+      if (existing && !needToApplyTerritory) skippedExisting++;
+      upsertedCount++;
+
+      if (needToApplyTerritory) {
+        try {
+          await applyLoopClaims(prisma, user.id, activity);
+          territoryAppliedCount++;
+        } catch (err) {
+          console.error('[reconcile] territory for activity', activity.id, err);
+        }
+      }
+    }
+
+    if (DEBUG) {
+      console.log('[reconcile] skippedExisting=%d upsertedCount=%d updatedPolylinesCount=%d territoryAppliedCount=%d',
+        skippedExisting, upsertedCount, updatedPolylinesCount, territoryAppliedCount);
+    }
+
+    return res.json({
+      ok: true,
+      cutoff: cutoffDate.toISOString(),
+      fetchedCount,
+      upsertedCount,
+      updatedPolylinesCount,
+      territoryAppliedCount,
+    });
+  } catch (e) {
+    console.error('[reconcile]', e);
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 // GET /api/debug/territory-db — DB counts and sample activities (only when DEBUG=1)
 app.get('/api/debug/territory-db', requireUser, async (req, res) => {
   if (!DEBUG) return res.status(404).end();
