@@ -27,33 +27,61 @@ import { getBadgeDefinition, TIER_ROMAN, BADGE_DEFINITIONS } from './badges/defi
 const METERS_PER_MILE = 1609.344;
 
 const app = express();
+
+// Render / reverse proxy: so req.protocol and req.get('host') reflect the public URL (https)
+app.set('trust proxy', 1);
+
 const PORT = Number(process.env.PORT) || 8787;
 const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
 
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production';
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
-const STRAVA_REDIRECT_URI = process.env.STRAVA_REDIRECT_URI || `http://localhost:${PORT}/auth/strava/callback`;
 const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
 const isProd = process.env.NODE_ENV === 'production';
 const AUTO_SYNC_MINUTES = Number(process.env.AUTO_SYNC_MINUTES) || 60;
 
-// CORS: allow only FRONTEND_URL (prod) and dev origins (localhost:4173, localhost:5173, 127.0.0.1)
+/** Strava redirect_uri: use env if set (full URL, e.g. https://terrarun-api.onrender.com/auth/strava/callback), else derive from request (trust proxy). */
+function getStravaRedirectUri(req) {
+  const fromEnv = (process.env.STRAVA_REDIRECT_URI || '').trim();
+  if (fromEnv) return fromEnv.replace(/\/+$/, '');
+  const protocol = req.protocol || 'http';
+  const host = req.get('host') || `localhost:${PORT}`;
+  return `${protocol}://${host}/auth/strava/callback`;
+}
+
+// CORS: allow FRONTEND_URL (prod), optional CORS_EXTRA_ORIGINS (e.g. for local frontend testing Render API), and dev origins when !isProd
 const allowedOrigins = [FRONTEND_URL];
+const extraOrigins = (process.env.CORS_EXTRA_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
+allowedOrigins.push(...extraOrigins);
 if (!isProd) {
   allowedOrigins.push('http://localhost:4173', 'http://127.0.0.1:4173', 'http://localhost:5173', 'http://127.0.0.1:5173');
 }
 app.use(cors({
   origin: (origin, cb) => {
-    if (!origin) return cb(null, true);
+    if (!origin) {
+      if (DEBUG) console.log('[cors] no origin (e.g. same-origin or curl) allowed=true');
+      return cb(null, true);
+    }
     const o = origin.replace(/\/$/, '');
-    if (allowedOrigins.includes(o)) return cb(null, true);
+    const allowed = allowedOrigins.includes(o);
+    if (DEBUG) console.log('[cors] origin=%s allowed=%s', o, allowed);
+    if (allowed) return cb(null, true);
     return cb(null, false);
   },
   credentials: true,
 }));
 app.use(express.json());
 app.use(cookieParser(SESSION_SECRET));
+
+// DEBUG: request trace (method, path, origin, cookie present, no secrets)
+if (DEBUG) {
+  app.use((req, res, next) => {
+    const hasCookie = !!req.signedCookies?.tr_session;
+    console.log('[req] %s %s origin=%s cookie=%s', req.method, req.path, req.get('origin') || '-', hasCookie ? 'yes' : 'no');
+    next();
+  });
+}
 
 // ——— Helpers ———
 
@@ -127,9 +155,27 @@ function clearSessionCookie(res) {
 
 // ——— Routes ———
 
-// POST /api/health — for Render / load balancers (no auth)
-app.post('/api/health', (req, res) => {
-  res.json({ ok: true, status: 'ok' });
+// GET/POST /api/health — for Render / load balancers and connectivity check (no auth)
+const healthPayload = () => ({
+  ok: true,
+  env: process.env.NODE_ENV || 'development',
+  time: new Date().toISOString(),
+  service: 'terrarun-api',
+});
+app.get('/api/health', (req, res) => res.json(healthPayload()));
+app.post('/api/health', (req, res) => res.json(healthPayload()));
+
+// GET /api/debug/env — DEBUG only: safe config summary (no secrets)
+app.get('/api/debug/env', (req, res) => {
+  if (!DEBUG) return res.status(404).json({ error: 'Not found' });
+  const cookieOpts = sessionCookieOptions();
+  res.json({
+    NODE_ENV: process.env.NODE_ENV || 'development',
+    FRONTEND_URL,
+    STRAVA_REDIRECT_URI: process.env.STRAVA_REDIRECT_URI || '(derived from request)',
+    cookie: { secure: cookieOpts.secure, sameSite: cookieOpts.sameSite },
+    CORS: { allowedOrigins },
+  });
 });
 
 // POST /api/nickname — create user, set session, optional link pending Strava
@@ -371,9 +417,10 @@ app.get('/auth/strava/start', (req, res) => {
   } catch (e) {
     return res.redirect(302, `${FRONTEND_URL}?strava=error&message=${encodeURIComponent(e.message)}`);
   }
+  const redirectUri = getStravaRedirectUri(req);
   const params = new URLSearchParams({
     client_id: STRAVA_CLIENT_ID,
-    redirect_uri: STRAVA_REDIRECT_URI,
+    redirect_uri: redirectUri,
     response_type: 'code',
     scope: 'activity:read_all',
     approval_prompt: 'auto', // do not force consent for returning users
@@ -384,7 +431,8 @@ app.get('/auth/strava/start', (req, res) => {
   }
   const url = `https://www.strava.com/oauth/authorize?${params.toString()}`;
   if (DEBUG) {
-    console.log('[auth/strava/start] authorize params', Object.fromEntries(params));
+    console.log('[auth] start redirect_uri=%s protocol=%s host=%s x-forwarded-proto=%s', redirectUri, req.protocol, req.get('host'), req.get('x-forwarded-proto') || '-');
+    console.log('[auth] authorize URL: %s', url);
   }
   res.redirect(302, url);
 });
@@ -416,7 +464,8 @@ app.get('/auth/strava/callback', async (req, res) => {
       const cookieOpts = { ...sessionCookieOptions(), signed: true };
       res.cookie('tr_session', existingStrava.userId, cookieOpts);
       if (DEBUG) {
-        console.log('[auth/strava/callback] athleteId=%s foundExistingAccount=true redirect=/app session set for userId=%s (path=%s)', athleteId, existingStrava.userId, cookieOpts.path);
+        console.log('[auth] callback athleteId=%s existing=true redirectTo=/app userId=%s', athleteId, existingStrava.userId);
+        console.log('[session] set-cookie secure=%s sameSite=%s', cookieOpts.secure, cookieOpts.sameSite);
       }
       return res.redirect(302, `${FRONTEND_URL}/app`);
     }
@@ -436,11 +485,11 @@ app.get('/auth/strava/callback', async (req, res) => {
       signed: true,
     });
     if (DEBUG) {
-      console.log('[auth/strava/callback] athleteId=%s foundExistingAccount=false redirect=/onboarding', athleteId);
+      console.log('[auth] callback athleteId=%s existing=false redirectTo=/onboarding', athleteId);
     }
     return res.redirect(302, `${FRONTEND_URL}/onboarding`);
   } catch (e) {
-    console.error('Strava callback', e);
+    console.error('[auth] callback error', e);
     return res.redirect(302, `${FRONTEND_URL}?strava=error&message=${encodeURIComponent(e.message)}`);
   }
 });

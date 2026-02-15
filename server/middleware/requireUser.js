@@ -4,9 +4,12 @@
  */
 import { prisma } from '../lib/prisma.js';
 
+const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
+
 export async function requireUser(req, res, next) {
   const userId = req.signedCookies?.tr_session;
   if (!userId) {
+    if (DEBUG) console.log('[req] /api/me or protected route: 401 cookie not set or not sent');
     return res.status(401).json({ error: 'Unauthorized', message: 'Session required. Set a nickname first.' });
   }
   try {
@@ -15,10 +18,12 @@ export async function requireUser(req, res, next) {
       include: { stravaAccount: true },
     });
     if (!user) {
+      if (DEBUG) console.log('[req] /api/me or protected route: 401 session invalid (user not found)');
       res.clearCookie('tr_session', { path: '/', httpOnly: true });
       return res.status(401).json({ error: 'Unauthorized', message: 'Session invalid.' });
     }
     req.user = user;
+    if (DEBUG) console.log('[req] path=%s user=%s', req.path, user.id);
     next();
   } catch (e) {
     console.error('requireUser', e);
