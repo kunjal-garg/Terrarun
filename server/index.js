@@ -50,7 +50,7 @@ function getStravaRedirectUri(req) {
   return `${protocol}://${host}/auth/strava/callback`;
 }
 
-// CORS: allow FRONTEND_URL (prod), optional CORS_EXTRA_ORIGINS (e.g. for local frontend testing Render API), and dev origins when !isProd
+// CORS: allow FRONTEND_URL (prod), CORS_EXTRA_ORIGINS (e.g. http://localhost:4173,http://127.0.0.1:4173 for local frontend → Render), and dev origins when !isProd. credentials:true required for cookies.
 const allowedOrigins = [FRONTEND_URL];
 const extraOrigins = (process.env.CORS_EXTRA_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 allowedOrigins.push(...extraOrigins);
@@ -137,6 +137,7 @@ async function fetchAthlete(accessToken) {
   return res.json();
 }
 
+// Production (e.g. Render): SameSite=None and Secure=true required for cross-site cookies (local frontend → Render backend).
 function sessionCookieOptions() {
   return {
     httpOnly: true,
@@ -176,6 +177,37 @@ app.get('/api/debug/env', (req, res) => {
     cookie: { secure: cookieOpts.secure, sameSite: cookieOpts.sameSite },
     CORS: { allowedOrigins },
   });
+});
+
+// GET /api/debug/auth-status — DEBUG only: cookie/session state for diagnosing cross-site auth (no secrets)
+app.get('/api/debug/auth-status', async (req, res) => {
+  if (!DEBUG) return res.status(404).json({ error: 'Not found' });
+  const hasSessionCookie = !!req.signedCookies?.tr_session;
+  const hasPendingCookie = !!req.signedCookies?.tr_strava_pending;
+  let resolvedUserId = null;
+  if (hasSessionCookie) {
+    const user = await prisma.user.findUnique({
+      where: { id: req.signedCookies.tr_session },
+      select: { id: true },
+    });
+    if (user) resolvedUserId = user.id;
+  }
+  const cookieOpts = sessionCookieOptions();
+  res.json({
+    hasSessionCookie,
+    resolvedUserId,
+    hasPendingCookie,
+    cookieConfig: { sameSite: cookieOpts.sameSite, secure: cookieOpts.secure },
+    requestOrigin: req.get('origin') || null,
+    host: req.get('host') || null,
+    'x-forwarded-proto': req.get('x-forwarded-proto') || null,
+  });
+});
+
+// GET /api/auth/pending — no auth: true if tr_strava_pending cookie present (so onboarding can show nickname form after Strava callback)
+app.get('/api/auth/pending', (req, res) => {
+  const hasPending = !!req.signedCookies?.tr_strava_pending;
+  res.json({ hasPending });
 });
 
 // POST /api/nickname — create user, set session, optional link pending Strava
@@ -253,6 +285,9 @@ app.post('/api/logout', (req, res) => {
 // GET /api/me — require session, return user + stravaLinked + activities
 app.get('/api/me', requireUser, async (req, res) => {
   const user = req.user;
+  if (DEBUG) {
+    console.log('[api/me] origin=%s cookie=yes userId=%s', req.get('origin') || '-', user.id);
+  }
   const stravaAccount = user.stravaAccount;
   const activities = await prisma.activity.findMany({
     where: { userId: user.id },
@@ -463,11 +498,12 @@ app.get('/auth/strava/callback', async (req, res) => {
       });
       const cookieOpts = { ...sessionCookieOptions(), signed: true };
       res.cookie('tr_session', existingStrava.userId, cookieOpts);
+      const redirectTo = `${FRONTEND_URL}/app`;
       if (DEBUG) {
-        console.log('[auth] callback athleteId=%s existing=true redirectTo=/app userId=%s', athleteId, existingStrava.userId);
-        console.log('[session] set-cookie secure=%s sameSite=%s', cookieOpts.secure, cookieOpts.sameSite);
+        console.log('[auth] callback athleteId=%s existingAccount=true setting tr_session=yes setting tr_strava_pending=no redirectTo=%s', athleteId, redirectTo);
+        console.log('[session] set-cookie secure=%s sameSite=%s path=/', cookieOpts.secure, cookieOpts.sameSite);
       }
-      return res.redirect(302, `${FRONTEND_URL}/app`);
+      return res.redirect(302, redirectTo);
     }
 
     const pending = JSON.stringify({
@@ -476,18 +512,21 @@ app.get('/auth/strava/callback', async (req, res) => {
       expiresAt,
       athleteId,
     });
-    res.cookie('tr_strava_pending', pending, {
+    const pendingCookieOpts = {
       httpOnly: true,
       secure: isProd,
       sameSite: isProd ? 'none' : 'lax',
       maxAge: 10 * 60 * 1000,
       path: '/',
       signed: true,
-    });
+    };
+    res.cookie('tr_strava_pending', pending, pendingCookieOpts);
+    const redirectToOnboarding = `${FRONTEND_URL}/onboarding`;
     if (DEBUG) {
-      console.log('[auth] callback athleteId=%s existing=false redirectTo=/onboarding', athleteId);
+      console.log('[auth] callback athleteId=%s existingAccount=false setting tr_session=no setting tr_strava_pending=yes redirectTo=%s', athleteId, redirectToOnboarding);
+      console.log('[session] set-cookie tr_strava_pending secure=%s sameSite=%s path=/', pendingCookieOpts.secure, pendingCookieOpts.sameSite);
     }
-    return res.redirect(302, `${FRONTEND_URL}/onboarding`);
+    return res.redirect(302, redirectToOnboarding);
   } catch (e) {
     console.error('[auth] callback error', e);
     return res.redirect(302, `${FRONTEND_URL}?strava=error&message=${encodeURIComponent(e.message)}`);

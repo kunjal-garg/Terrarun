@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { getApiBase } from '../utils/api.js';
 import './onboarding.css';
 
@@ -7,20 +7,56 @@ const NICKNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
 const API_BASE = getApiBase();
 const API_NICKNAME_URL = `${API_BASE}/api/nickname`;
 
+// Auth state derived from API (so onboarding works after Strava callback when cookies are cross-site)
+const AUTH_LOADING = 'loading';
+const AUTH_READY = 'ready'; // has session → redirect to /app, or has pending → show form, or neither → connect Strava first
+
 export default function Onboarding() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
   const [nickname, setNickname] = useState('');
   const [touched, setTouched] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [errorBanner, setErrorBanner] = useState(null);
-  const [hasStrava, setHasStrava] = useState(false);
+  const [authState, setAuthState] = useState(AUTH_LOADING);
+  const [guardReason, setGuardReason] = useState(null); // 'cookie_missing' | 'strava_not_linked'
 
   useEffect(() => {
-    const strava = searchParams.get('strava') === 'connected';
-    const fromLanding = document.referrer && document.referrer.includes(window.location.origin);
-    setHasStrava(strava || fromLanding || !!sessionStorage.getItem('terrarun_strava_connected'));
-  }, [searchParams]);
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const [meRes, pendingRes] = await Promise.all([
+          fetch(`${API_BASE}/api/me`, { credentials: 'include' }),
+          fetch(`${API_BASE}/api/auth/pending`, { credentials: 'include' }),
+        ]);
+        if (cancelled) return;
+        const pendingData = await pendingRes.json().catch(() => ({}));
+        const hasPending = !!pendingData.hasPending;
+
+        if (meRes.ok) {
+          const meData = await meRes.json();
+          if (meData.stravaLinked) {
+            navigate('/app', { replace: true });
+            return;
+          }
+          setGuardReason('strava_not_linked');
+        } else {
+          if (hasPending) {
+            setAuthState(AUTH_READY);
+            return;
+          }
+          setGuardReason('cookie_missing');
+        }
+        setAuthState(AUTH_READY);
+      } catch {
+        if (!cancelled) {
+          setGuardReason('cookie_missing');
+          setAuthState(AUTH_READY);
+        }
+      }
+    };
+    run();
+    return () => { cancelled = true; };
+  }, [navigate]);
 
   const invalid = nickname.length > 0 && !NICKNAME_REGEX.test(nickname);
   const valid = NICKNAME_REGEX.test(nickname);
@@ -63,12 +99,27 @@ export default function Onboarding() {
     navigate('/');
   };
 
-  if (!hasStrava) {
+  if (authState === AUTH_LOADING) {
+    return (
+      <div className="onboarding-root">
+        <div className="onboarding-card">
+          <p className="onboarding-sub">Checking…</p>
+        </div>
+      </div>
+    );
+  }
+
+  const showGuard = guardReason === 'cookie_missing' || guardReason === 'strava_not_linked';
+  if (showGuard) {
+    const message =
+      guardReason === 'cookie_missing'
+        ? 'Session not established (cookie missing). Try connecting Strava from the home page and ensure cookies are allowed for this site.'
+        : 'Strava account not linked yet. Connect Strava on the home page to continue.';
     return (
       <div className="onboarding-root">
         <div className="onboarding-card">
           <h1 className="onboarding-title">Connect Strava first</h1>
-          <p className="onboarding-sub">Please connect your Strava account on the home page, then return here to set your nickname.</p>
+          <p className="onboarding-sub">{message}</p>
           <button type="button" className="onboarding-back" onClick={handleBack}>
             Back to home
           </button>
