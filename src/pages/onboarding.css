@@ -186,3 +186,83 @@
   font-size: 0.85rem;
   color: rgba(232, 232, 238, 0.9);
 }
+
+/* Cookies blocked guard – short, friendly */
+.onboarding-cookie-blocked-banner {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(255, 200, 80, 0.1);
+  border: 1px solid rgba(255, 200, 80, 0.3);
+  border-radius: 10px;
+  font-size: 0.95rem;
+  color: var(--text);
+}
+.onboarding-cookie-blocked-banner p {
+  margin: 0 0 0.75rem;
+  color: var(--text-muted);
+}
+.onboarding-cookie-blocked-steps {
+  margin: 0.75rem 0;
+  padding-left: 1.25rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+.onboarding-cookie-blocked-steps li {
+  margin-bottom: 0.35rem;
+}
+.onboarding-cookie-blocked-actions {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+.onboarding-cookie-blocked-retry {
+  padding: 0.5rem 1rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #0a0a12;
+  background: var(--neon);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+.onboarding-cookie-blocked-retry:hover {
+  filter: brightness(1.05);
+}
+.onboarding-cookie-blocked-how {
+  font-size: 0.9rem;
+  color: var(--neon);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+.onboarding-cookie-blocked-how:hover {
+  color: #00d4aa;
+}
+.onboarding-cookie-blocked-why {
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+}
+.onboarding-cookie-blocked-why a {
+  color: var(--text-muted);
+  text-decoration: underline;
+}
+.onboarding-cookie-blocked-why a:hover {
+  color: var(--neon);
+}
+.onboarding-diagnostics-toggle {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+}
+.onboarding-diagnostics-toggle:hover {
+  color: var(--neon);
+}

@@ -3,9 +3,13 @@ import ReactDOM from 'react-dom/client';
 import App from './App.jsx';
 import { getApiBase } from './utils/api.js';
 
-// Log API base at runtime (dev and production) so we can confirm frontend talks to the right backend (e.g. Render). In Docker, Vite bakes VITE_STRAVA_API_URL at build time.
-const apiBase = getApiBase();
-console.log('[TerraRun] API base:', apiBase);
+if (import.meta.env.DEV) {
+  const apiBase = getApiBase();
+  console.log('[TerraRun] API base:', apiBase);
+  if (!apiBase || apiBase.includes('localhost')) {
+    console.warn('[TerraRun] For production, set VITE_STRAVA_API_URL to your API URL.');
+  }
+}
 
 // Polyfill window.storage (async API) using localStorage for browser
 window.storage = {

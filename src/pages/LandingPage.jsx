@@ -18,9 +18,6 @@ export default function LandingPage() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('strava') === 'connected') {
       setStravaConnected(true);
-      try {
-        sessionStorage.setItem('terrarun_strava_connected', '1');
-      } catch (_) {}
       window.history.replaceState({}, '', window.location.pathname);
     }
     if (params.get('strava') === 'error') {

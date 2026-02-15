@@ -37,7 +37,7 @@ const DEBUG = process.env.DEBUG === '1' || process.env.DEBUG === 'true';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production';
 const STRAVA_CLIENT_ID = process.env.STRAVA_CLIENT_ID;
 const STRAVA_CLIENT_SECRET = process.env.STRAVA_CLIENT_SECRET;
-const FRONTEND_URL = (process.env.FRONTEND_URL || 'http://localhost:5173').replace(/\/$/, '');
+const FRONTEND_URL = (process.env.FRONTEND_URL || '').replace(/\/$/, '');
 const isProd = process.env.NODE_ENV === 'production';
 const AUTO_SYNC_MINUTES = Number(process.env.AUTO_SYNC_MINUTES) || 60;
 
@@ -46,17 +46,15 @@ function getStravaRedirectUri(req) {
   const fromEnv = (process.env.STRAVA_REDIRECT_URI || '').trim();
   if (fromEnv) return fromEnv.replace(/\/+$/, '');
   const protocol = req.protocol || 'http';
-  const host = req.get('host') || `localhost:${PORT}`;
+  const host = req.get('host');
+  if (!host) return '';
   return `${protocol}://${host}/auth/strava/callback`;
 }
 
-// CORS: allow FRONTEND_URL (prod), CORS_EXTRA_ORIGINS (e.g. http://localhost:4173,http://127.0.0.1:4173 for local frontend → Render), and dev origins when !isProd. credentials:true required for cookies.
-const allowedOrigins = [FRONTEND_URL];
+// CORS: allow FRONTEND_URL + CORS_EXTRA_ORIGINS only. Set in env (e.g. on Render). credentials:true required for cookies.
+const allowedOrigins = [FRONTEND_URL].filter(Boolean);
 const extraOrigins = (process.env.CORS_EXTRA_ORIGINS || '').split(',').map((s) => s.trim()).filter(Boolean);
 allowedOrigins.push(...extraOrigins);
-if (!isProd) {
-  allowedOrigins.push('http://localhost:4173', 'http://127.0.0.1:4173', 'http://localhost:5173', 'http://127.0.0.1:5173');
-}
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) {
@@ -466,6 +464,13 @@ app.get('/auth/strava/start', (req, res) => {
     return res.redirect(302, `${FRONTEND_URL}?strava=error&message=${encodeURIComponent(e.message)}`);
   }
   const redirectUri = getStravaRedirectUri(req);
+  if (!redirectUri) {
+    if (DEBUG) console.log('[auth] start redirect_uri empty (host missing or STRAVA_REDIRECT_URI not set)');
+    return res.status(500).json({
+      error: 'Server misconfiguration',
+      message: 'Strava redirect URI could not be determined. Set STRAVA_REDIRECT_URI or ensure the request has a valid Host header.',
+    });
+  }
   const params = new URLSearchParams({
     client_id: STRAVA_CLIENT_ID,
     redirect_uri: redirectUri,
@@ -541,13 +546,6 @@ app.get('/auth/strava/callback', async (req, res) => {
     if (DEBUG) {
       console.log('[auth] callback athleteId=%s existingAccount=false setting tr_session=no setting tr_strava_pending=yes redirectTo=%s', athleteId, redirectToOnboarding);
       console.log('[session] set-cookie tr_strava_pending secure=%s sameSite=%s path=/ httpOnly=true', pendingCookieOpts.secure, pendingCookieOpts.sameSite);
-    }
-    const useHandoffPage = process.env.USE_COOKIE_HANDOFF_PAGE === '1' || process.env.USE_COOKIE_HANDOFF_PAGE === 'true';
-    if (useHandoffPage) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      return res.status(200).send(
-        `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Setting cookie…</title></head><body><p>Setting cookie…</p><script>window.location.replace(${JSON.stringify(redirectToOnboarding)});</script></body></html>`
-      );
     }
     return res.redirect(302, redirectToOnboarding);
   } catch (e) {
@@ -1422,5 +1420,8 @@ app.post('/api/notifications/read-all', requireUser, async (req, res) => {
 app.listen(PORT, () => {
   console.log(`TerraRun API listening on port ${PORT}`);
   console.log(`  NODE_ENV=${process.env.NODE_ENV ?? 'undefined'}`);
-  console.log(`  FRONTEND_URL=${FRONTEND_URL}`);
+  console.log(`  FRONTEND_URL=${FRONTEND_URL || '(not set)'}`);
+  if (isProd && !FRONTEND_URL) {
+    console.warn('  WARNING: Set FRONTEND_URL (e.g. your Vercel URL) for redirects and CORS.');
+  }
 });

@@ -9,7 +9,7 @@ function normalizeApiBase(base) {
 function formatFetchError(e, url, fallback) {
   const msg = e?.message || String(e) || fallback;
   if (msg === 'Failed to fetch') {
-    return `Network error (request to ${url}). Check: 1) API running at that URL (e.g. docker compose ps). 2) Open app at http://localhost:4173 or http://127.0.0.1:4173. 3) CORS may block other origins.`;
+    return 'Network error. Check that the API is reachable and that your browser allows cookies for this site.';
   }
   return msg;
 }
