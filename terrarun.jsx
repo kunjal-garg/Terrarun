@@ -1083,6 +1083,7 @@ export default function TerraRun() {
             onSync={async (data) => {
               setAutoSyncError(null);
               fetchMe();
+              fetchRunModeStats();
               if (data?.territoryChanges) {
                 setFlashGainedPolygons(data.territoryChanges.gainedPolygons || []);
                 setFlashLostPolygons(data.territoryChanges.lostPolygons || []);
@@ -1117,6 +1118,7 @@ export default function TerraRun() {
             }}
             onResyncComplete={() => {
               fetchMe();
+              fetchRunModeStats();
               setTerritoryRefreshTrigger((t) => t + 1);
             }}
             onSelectActivity={setSelectedActivityId}
