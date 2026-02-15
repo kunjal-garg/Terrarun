@@ -1,0 +1,22 @@
+/* Shared footer for Privacy and Terms pages */
+.legal-footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(0, 255, 136, 0.12);
+  font-size: 0.95rem;
+}
+
+.legal-footer-link {
+  color: #00ff88;
+  text-decoration: none;
+}
+
+.legal-footer-link:hover {
+  text-decoration: underline;
+  color: rgba(0, 255, 136, 0.6);
+}
+
+.legal-footer-sep {
+  margin: 0 0.6rem;
+  color: rgba(232, 232, 238, 0.75);
+}

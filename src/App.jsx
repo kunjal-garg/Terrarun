@@ -4,6 +4,8 @@ import { getApiBase } from './utils/api.js';
 import LandingPage from './pages/LandingPage.jsx';
 import Onboarding from './pages/Onboarding.jsx';
 import AppPage from './pages/AppPage.jsx';
+import PrivacyPolicy from './pages/PrivacyPolicy.jsx';
+import TermsOfService from './pages/TermsOfService.jsx';
 
 function ConfigError() {
   return (
@@ -42,6 +44,8 @@ export default function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/onboarding" element={<Onboarding />} />
         <Route path="/app" element={<AppPage />} />
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        <Route path="/terms" element={<TermsOfService />} />
       </Routes>
     </BrowserRouter>
   );

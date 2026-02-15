@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import StravaIcon from '../components/StravaIcon.jsx';
 import './landing.css';
 
@@ -106,7 +106,7 @@ export default function LandingPage() {
                     </a>
                   </p>
                 )}
-                <p className="landing-privacy">We only display your nickname publicly.</p>
+                <p className="landing-privacy">We only display your nickname publicly. <Link to="/privacy" className="landing-privacy-link">Privacy Policy</Link></p>
                 <button
                   type="button"
                   className="landing-what-toggle"
@@ -125,6 +125,11 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+      </div>
+      <div className="landing-footer">
+        <Link to="/privacy" className="landing-footer-link">Privacy</Link>
+        <span className="landing-footer-sep">•</span>
+        <Link to="/terms" className="landing-footer-link">Terms</Link>
       </div>
     </div>
   );

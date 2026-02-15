@@ -13,12 +13,20 @@
   color: var(--text);
   font-family: system-ui, -apple-system, sans-serif;
   overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .landing-split {
   display: flex;
-  min-height: 100vh;
+  flex: 1 0 auto;
+  min-height: 0;
   align-items: stretch;
+}
+@media (min-width: 769px) {
+  .landing-split {
+    min-height: 100vh;
+  }
 }
 @media (max-width: 768px) {
   .landing-split {
@@ -201,6 +209,14 @@
   margin: 1rem 0 0;
   opacity: 0.9;
 }
+.landing-privacy-link {
+  color: var(--neon-dim);
+  text-decoration: none;
+}
+.landing-privacy-link:hover {
+  text-decoration: underline;
+  color: var(--neon);
+}
 
 .landing-banner {
   padding: 0.9rem 1rem;
@@ -272,4 +288,38 @@
   background: rgba(255, 255, 255, 0.04);
   border-radius: 8px;
   border-left: 3px solid var(--cyan-dim);
+}
+
+/* Landing footer: Privacy & Terms (subtle, Strava readiness) */
+.landing-footer {
+  flex-shrink: 0;
+  padding: 50px 1rem 1.5rem;
+  text-align: center;
+  border-top: 1px solid rgba(0, 255, 136, 0.1);
+}
+.landing-footer-link {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.2s, text-decoration 0.2s;
+}
+.landing-footer-link:hover {
+  color: var(--neon);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.landing-footer-link:focus-visible {
+  outline: 2px solid var(--neon);
+  outline-offset: 2px;
+}
+.landing-footer-sep {
+  margin: 0 0.5rem;
+  font-size: 0.75rem;
+  color: rgba(232, 232, 238, 0.4);
+  user-select: none;
+}
+@media (max-width: 768px) {
+  .landing-footer {
+    padding: 40px 1rem 1.25rem;
+  }
 }

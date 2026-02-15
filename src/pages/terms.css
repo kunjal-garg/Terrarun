@@ -1,0 +1,88 @@
+/* TerraRun Terms of Service – dark theme, neon accents, readable layout */
+.terms-root {
+  --neon: #00ff88;
+  --neon-dim: rgba(0, 255, 136, 0.6);
+  --bg: #0a0a12;
+  --text: #e8e8ee;
+  --text-muted: rgba(232, 232, 238, 0.75);
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  padding: 2rem 1.5rem 3rem;
+  box-sizing: border-box;
+}
+
+.terms-article {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.terms-title {
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  color: var(--text);
+  margin: 0 0 0.5rem;
+  text-shadow: 0 0 32px rgba(0, 255, 136, 0.1);
+}
+
+.terms-meta {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0 0 2rem;
+}
+
+.terms-section {
+  margin-bottom: 2rem;
+}
+
+.terms-heading {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--neon);
+  letter-spacing: 0.02em;
+  margin: 0 0 0.75rem;
+  border-bottom: 1px solid rgba(0, 255, 136, 0.2);
+  padding-bottom: 0.35rem;
+}
+
+.terms-list {
+  margin: 0;
+  padding-left: 1.35rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.terms-list li {
+  margin-bottom: 0.5rem;
+}
+
+.terms-list li:last-child {
+  margin-bottom: 0;
+}
+
+.terms-para {
+  margin: 0;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+
+.terms-link {
+  color: var(--neon);
+  text-decoration: none;
+}
+
+.terms-link:hover {
+  text-decoration: underline;
+  color: var(--neon-dim);
+}
+
+@media (max-width: 640px) {
+  .terms-root {
+    padding: 1.5rem 1rem 2.5rem;
+  }
+  .terms-list {
+    padding-left: 1.2rem;
+  }
+}
