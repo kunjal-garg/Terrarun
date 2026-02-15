@@ -1,25 +1,54 @@
 # TerraRun
 
-Real-world territory capture: connect Strava, run routes, claim areas on the map, compete on the leaderboard.
+<p align="center">
+  <img src="public/logo.png" alt="TerraRun" width="200" />
+</p>
 
-- **Run locally:** `./run.sh` (Docker: frontend, API, PostgreSQL). Frontend: http://localhost:4173, API: http://localhost:8787.
-- **Deploy:** Frontend on [Vercel](https://vercel.com), API on [Render](https://render.com) (or similar). Set env vars per checklist below.
+**Turn your runs into territory.** Connect Strava, run routes, and compete for area on the map.
+
+TerraRun is a location-based running game: you connect your Strava account, and your activities become routes and claimable loops. Compete on leaderboards by total area captured, unlock badges, and see your progress over time—all with a privacy-first design.
 
 ---
 
-## Environment variable checklist
+## Features
 
-### Frontend (Vercel)
+### Connect & sync
+- **Strava integration** — Sign in with Strava (OAuth). Your activities sync so you can see routes and claim territory.
+- **Import recent (90 days)** — Pull in older or newly imported Strava activities so nothing is missed.
+- **Load my Strava activities** — Manual sync for the latest activities (incremental by last sync time).
 
-| Variable | Required | Description |
-|----------|----------|-------------|
-| **VITE_STRAVA_API_URL** | **Yes** (production) | Backend API URL (e.g. `https://your-api.onrender.com`). Dev default: `http://localhost:8787`. |
-| **VITE_MAPTILER_KEY** | **Yes** | MapTiler API key for the map. [Get one](https://www.maptiler.com/cloud/) (free tier). |
-| **VITE_APP_DEBUG** | No | Set to `true` to show development-only controls (e.g. Resync from Strava). Omit or `false` in production. |
+### Run mode
+- **Activity routes on the map** — Your runs appear as routes from Strava polylines. Click an activity to highlight it and fit the map to its bounds.
+- **Run stats** — Today, this week, and all-time: distance, active days, streak, longest run.
+- **Territory from loops** — Closed-loop runs (e.g. laps) can claim territory; see loops completed and area owned.
+- **Badges & progress** — Unlock badges (e.g. by total miles, longest run, streak) and see progress to the next tier.
 
-- All API calls use `VITE_STRAVA_API_URL` with a sensible dev default; auth requests use `credentials: 'include'`.
-- Build: `npm run build` (output: `dist/`). Vercel uses `vercel.json` for SPA rewrites (`/`, `/app`, `/onboarding` → `index.html`).
+### Game mode
+- **Territory map** — 50 m grid cells; ownership is computed from your loop activities. View **Everyone** or **Friends only**.
+- **Leaderboard** — Global or friends, by total area or recent claims. See your rank and climb by capturing new loops.
+- **Conquests** — When someone takes your cells, you get a notification; “View” zooms to the attack and shows a short animation.
+- **Friends** — Add friends by nickname, accept/reject requests. Compete and see friends’ badges and leaderboard position.
 
-### Backend (Render)
+### General
+- **Notifications** — Territory conquered, friend requests, badge unlocks.
+- **Privacy & terms** — Privacy Policy and Terms of Service are linked from the landing page and footer. Session cookies; no selling of data; nickname visible only to friends in friend views.
+- **Mobile-friendly** — Responsive layout and map; works on phones and tablets.
 
-See `server/.env.example`. Key vars: `DATABASE_URL`, `SESSION_SECRET`, `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `FRONTEND_URL`, `STRAVA_REDIRECT_URI`. Start command: `npm run start:render` (runs migrations then server).
+---
+
+## Tech stack
+
+- **Frontend:** React 18, Vite, React Router, MapLibre GL JS, MapTiler.
+- **Backend:** Node.js, Express, Prisma, PostgreSQL.
+- **Auth:** Cookie-based sessions; Strava OAuth for activity access.
+- **Deploy:** Frontend (e.g. Vercel), API (e.g. Render); see `DEPLOYMENT.md` and `server/.env.example` for configuration.
+
+---
+
+## License
+
+Copyright (C) 2025 TerraRun.
+
+This project is licensed under the **GNU General Public License v3.0 (GPL-3.0)** — see the [LICENSE](LICENSE) file for the full text.
+
+You may use, copy, modify, and distribute this software under the terms of the GPL-3.0. If you convey modified or combined works based on TerraRun, you must make the source available under the same license and preserve copyright and license notices.
